@@ -29,6 +29,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Figtree,syste
 .timer{font:700 32px Figtree,sans-serif;font-variant-numeric:tabular-nums}
 .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 18px;border-radius:12px;background:var(--sea);color:#fff;font-weight:600;width:100%}
 .btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+button.btn{border:0;font:600 16px Figtree,sans-serif;cursor:pointer}
+.btn.alt{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.meta a{color:inherit}
 .item{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
 .item audio{width:100%}
 .meta{font-size:14px;color:var(--soft)}
@@ -40,7 +44,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Figtree,syste
 <body>
 <header class="top">
   <h1>Mic check</h1>
-  <p>Three quick tests for the travel memories app. Nothing is saved or sent anywhere yet. It all stays on your phone.</p>
+  <p>Four quick tests for the travel memories app. Nothing is saved or sent anywhere yet. It all stays on your phone.</p>
 </header>
 <main class="wrap">
   <section class="card">
@@ -56,12 +60,22 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Figtree,syste
   <section class="card">
     <h2>2 · Video size</h2>
     <p>Record a 15-second video, then a 30-second one. This shows how big each file is. The limit will be about 20–30 MB.</p>
-    <label class="btn">Record or choose a video<input type="file" accept="video/*" id="vid"></label>
+    <div class="row2">
+      <label class="btn">Record a video<input type="file" accept="video/*" capture="environment" class="vid"></label>
+      <label class="btn alt">Choose a video<input type="file" accept="video/*" class="vid"></label>
+    </div>
     <div id="vidOut"></div>
   </section>
 
   <section class="card">
-    <h2>3 · Photo location</h2>
+    <h2>3 · Where am I?</h2>
+    <p>Tests whether the app can get your location straight from your phone. Allow location when it asks.</p>
+    <button class="btn" id="loc" type="button">Use my location</button>
+    <div id="locOut"></div>
+  </section>
+
+  <section class="card">
+    <h2>4 · Photo location</h2>
     <p>Pick a photo from your camera roll that you took outside. This checks whether the location comes through.</p>
     <label class="btn">Choose a photo<input type="file" accept="image/*" id="pic"></label>
     <div id="picOut"></div>
@@ -105,8 +119,22 @@ $('rec').addEventListener('click',async()=>{
   tick=setInterval(()=>{$('timer').textContent=fmt((Date.now()-t0)/1000);},250);
 });
 
+/* ---- 3. Where am I ---- */
+$('loc').addEventListener('click',()=>{
+  if(!navigator.geolocation){$('locOut').innerHTML='<div class="item meta"><span class="bad">This browser can’t share location.</span></div>';return;}
+  $('loc').textContent='Finding you…';
+  navigator.geolocation.getCurrentPosition(p=>{
+    const la=p.coords.latitude.toFixed(5),lo=p.coords.longitude.toFixed(5),acc=Math.round(p.coords.accuracy);
+    $('locOut').insertAdjacentHTML('afterbegin',`<div class="item meta"><span class="ok">Location found ✓</span> · accurate to about ${acc} m · <a href="https://www.google.com/maps?q=${la},${lo}">${la}, ${lo}</a></div>`);
+    $('loc').textContent='Use my location';
+  },err=>{
+    $('locOut').insertAdjacentHTML('afterbegin',`<div class="item meta"><span class="bad">No location: ${err.code===1?'permission denied — allow location for this site in your browser settings':err.message}</span></div>`);
+    $('loc').textContent='Use my location';
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+});
+
 /* ---- 2. Video ---- */
-$('vid').addEventListener('change',e=>{
+document.querySelectorAll('.vid').forEach(inp=>inp.addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   const v=document.createElement('video');v.preload='metadata';
   v.onloadedmetadata=()=>show(v.duration);v.onerror=()=>show(NaN);
@@ -116,9 +144,9 @@ $('vid').addEventListener('change',e=>{
     $('vidOut').insertAdjacentHTML('afterbegin',`<div class="item meta">${isFinite(d)?fmt(d)+' · ':''}<b>${mb(f.size)}</b> · ${f.type||'unknown'} · ${okSize?'<span class="ok">fits under 20 MB</span>':'<span class="bad">over 20 MB</span>'}</div>`);
   }
   e.target.value='';
-});
+}));
 
-/* ---- 3. Photo location ---- */
+/* ---- 4. Photo location ---- */
 function gps(buf){
   try{
     const v=new DataView(buf);if(v.getUint16(0)!==0xFFD8)return null;
