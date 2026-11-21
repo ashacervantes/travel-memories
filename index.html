@@ -28,7 +28,8 @@ main{max-width:680px;margin:0 auto;padding:18px max(4vw,14px) 96px}
 .btn.alt{background:transparent;color:var(--ink);border:2px solid var(--line)}
 .btn.gold{background:var(--gold);color:#14202c}
 .btn:disabled{opacity:.5;cursor:default}
-.btn:focus-visible,input:focus-visible,textarea:focus-visible,.chip:focus-within,.cat:focus-within{outline:3px solid var(--gold);outline-offset:2px}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,.chip:has(input:focus-visible),.cat:has(input:focus-visible){outline:3px solid var(--gold);outline-offset:2px}
+.chip input:focus-visible{outline:none}
 label.f{display:block;font-weight:600;margin:14px 0 6px}
 input[type=text],input[type=date],input[type=password],textarea{width:100%;min-height:48px;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);font-size:16px}
 textarea{min-height:96px;resize:vertical}
@@ -47,6 +48,10 @@ textarea{min-height:96px;resize:vertical}
 .chip{position:relative;border:2px solid var(--line);border-radius:99px;padding:8px 14px;cursor:pointer;font-weight:600}
 .chip input{position:absolute;opacity:0}
 .chip:has(input:checked){border-color:var(--sea);background:var(--sea);color:#fff}
+.chip:has(input:checked)::before{content:'✓ '}
+.th{position:relative}
+.th .x{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-weight:700;cursor:pointer}
+.link{background:none;border:0;color:var(--bad);font-weight:600;text-decoration:underline;cursor:pointer;padding:8px 0;min-height:44px}
 .q{border-left:3px solid var(--gold);padding-left:12px;margin:12px 0}
 .q .es{color:var(--soft);font-style:italic}
 .q .done{color:var(--ok);font-weight:600;font-size:14px}
@@ -94,7 +99,7 @@ audio{width:100%;margin-top:8px}
 <script>
 {
 const MAILBOX = 'https://script.google.com/macros/s/AKfycbz6s8u8VuiGFGQxR6SdldymjjAbM_Q3FqQQov7giOvJrMz8YU5KPYQo0m9e26ShlVr_/exec';
-const MAX_MB = 15;
+const MAX_MB = 25;
 
 const CATS = {
   trip: {label:'Trip', hint:'Vacations, getaways', qs:[
@@ -252,27 +257,32 @@ let draft = null, rec = null, recStream = null, recTick = null, busy = false;
 
 function openComposer(opts) {
   const c = current;
-  draft = {mode: opts.mode, q: opts.q, photos: [], voice: null, video: null, lat: null, lng: null};
+  draft = {mode: opts.mode, q: opts.q, photos: [], voice: null, video: null, lat: null, lng: null, here: null};
   const people = c.people.length ? c.people : [cfg.name];
   const isAnswer = opts.mode === 'answer';
   $('#panel').innerHTML = `<h2 id="sheetTitle">${isAnswer ? 'Your answer' : 'Add a moment'}</h2>
     ${isAnswer ? `<div class="q"><div>${esc(opts.q[0])}</div><div class="es">${esc(opts.q[1])}</div></div>` : `<p class="muted">Add any mix: photos, voice, video, a note.</p>`}
     <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Photos</h4><label class="btn alt">Choose or take photos<input type="file" accept="image/*" multiple class="hide" id="inPhoto"></label><div class="thumbs" id="thPhoto"></div></div>
     <div class="sec"><h4>Voice</h4><div class="rec"><button class="recbtn" id="recBtn" type="button">Record</button><div><div class="timer" id="recT">0:00</div><div class="muted" id="recS">Tap to start, tap again to stop</div></div></div><div id="recOut"></div></div>
-    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Video</h4><div class="grid2"><label class="btn alt">Record<input type="file" accept="video/*" capture="environment" class="hide inVideo"></label><label class="btn alt">Choose<input type="file" accept="video/*" class="hide inVideo"></label></div><div class="muted" id="vidS"></div></div>
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Video</h4><div class="grid2"><label class="btn alt">Record<input type="file" accept="video/*" capture="environment" class="hide inVideo"></label><label class="btn alt">Choose<input type="file" accept="video/*" class="hide inVideo"></label></div><div id="vidOut"></div></div>
     <div class="sec"><h4>${isAnswer ? 'Or type it' : 'Note'}</h4><textarea id="note" placeholder="${isAnswer ? 'Type your answer…' : 'What happened? Who said what?'}"></textarea></div>
-    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Who was there</h4><div class="chips">${people.map(p => `<label class="chip"><input type="checkbox" value="${esc(p)}" checked>${esc(p)}</label>`).join('')}</div></div>
-    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Where</h4><div class="row"><input type="checkbox" id="useLoc" checked><label for="useLoc">Add where I am now</label></div><div class="muted" id="locS">Finding you…</div>
-      <label class="f" for="place">Place name (optional)</label><input type="text" id="place" placeholder="Tía's house, the overlook…"></div>
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Who was there</h4><p class="muted" style="margin:-4px 0 8px">Tap a name to remove it</p><div class="chips">${people.map(p => `<label class="chip"><input type="checkbox" value="${esc(p)}" checked>${esc(p)}</label>`).join('')}</div></div>
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Are you there now?</h4>
+      <div class="chips"><label class="chip"><input type="radio" name="here" value="yes">Yes, I'm there</label><label class="chip"><input type="radio" name="here" value="no">No, adding it later</label></div>
+      <div class="muted" id="locS" style="margin-top:8px">Yes saves your phone's location. Either way you can name the place.</div>
+      <label class="f" for="place">Place name (optional)</label><input type="text" id="place" placeholder="The pottery studio, Tía's house…"></div>
     <div class="status" id="saveS"></div>
     <div class="grid2" style="margin-top:12px"><button class="btn alt" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save</button></div>`;
   $('#sheet').classList.add('open');
   $('#inPhoto').addEventListener('change', e => { [...e.target.files].forEach(f => addFile('photo', f)); e.target.value = ''; });
   document.querySelectorAll('.inVideo').forEach(i => i.addEventListener('change', e => { if (e.target.files[0]) addFile('video', e.target.files[0]); e.target.value = ''; }));
+  document.querySelectorAll('input[name=here]').forEach(r => r.addEventListener('change', () => {
+    draft.here = r.value;
+    if (r.value === 'yes') getLocation(); else { draft.lat = draft.lng = null; $('#locS').textContent = 'No location from your phone. Type the place name below.'; }
+  }));
   $('#recBtn').addEventListener('click', toggleRec);
   $('#cancel').addEventListener('click', closeComposer);
   $('#save').addEventListener('click', saveDraft);
-  if (!isAnswer) getLocation();
   if (opts.start === 'photo') $('#inPhoto').click();
   if (opts.start === 'video') document.querySelector('.inVideo').click();
   if (opts.start === 'voice') toggleRec();
@@ -288,21 +298,26 @@ function closeComposer() {
 }
 
 function getLocation() {
-  if (!navigator.geolocation) { $('#locS').textContent = 'Location isn’t available on this browser.'; return; }
+  if (!navigator.geolocation) { $('#locS').textContent = 'Location isn’t available on this browser. Type the place name below.'; return; }
+  $('#locS').textContent = 'Finding you…';
   navigator.geolocation.getCurrentPosition(p => {
-    if (!draft) return; draft.lat = +p.coords.latitude.toFixed(5); draft.lng = +p.coords.longitude.toFixed(5);
+    if (!draft || draft.here !== 'yes') return;
+    draft.lat = +p.coords.latitude.toFixed(5); draft.lng = +p.coords.longitude.toFixed(5);
     $('#locS').textContent = `📍 Location found (about ${Math.round(p.coords.accuracy)} m)`;
-  }, () => { if (draft) $('#locS').textContent = 'Couldn’t get your location. You can type a place name.'; }, {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
+  }, () => { if (draft) $('#locS').textContent = 'Couldn’t get your location. Type the place name below.'; }, {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
+}
+
+function renderPhotos() {
+  $('#thPhoto').innerHTML = draft.photos.map((p, i) => `<div class="th"><img src="${p.url}" alt="Selected photo ${i+1}"><button type="button" class="x" data-x="${i}" aria-label="Remove photo ${i+1}">✕</button></div>`).join('');
+  document.querySelectorAll('#thPhoto .x').forEach(b => b.addEventListener('click', () => { draft.photos.splice(+b.dataset.x, 1); renderPhotos(); }));
 }
 
 function addFile(kind, f) {
-  if (f.size > MAX_MB * 1048576) {
-    const msg = `That ${kind} is ${mb(f.size)}. The limit is ${MAX_MB} MB${kind === 'video' ? ', so try a shorter clip' : ''}.`;
-    if (kind === 'video') $('#vidS').textContent = msg; else toast(msg);
-    return;
-  }
-  if (kind === 'photo') { draft.photos.push(f); $('#thPhoto').insertAdjacentHTML('beforeend', `<img src="${URL.createObjectURL(f)}" alt="Selected photo">`); }
-  if (kind === 'video') { draft.video = f; $('#vidS').textContent = `Video added · ${mb(f.size)}`; }
+  if (kind === 'photo') { draft.photos.push({file: f, url: URL.createObjectURL(f)}); renderPhotos(); return; }
+  if (f.size > MAX_MB * 1048576) { $('#vidOut').innerHTML = `<div class="status bad">That video is ${mb(f.size)}. The limit is ${MAX_MB} MB, so try a shorter clip.</div>`; return; }
+  draft.video = f;
+  $('#vidOut').innerHTML = `<div class="row" style="margin-top:8px"><span class="muted">Video added · ${mb(f.size)}</span><button type="button" class="link" id="rmVid">Remove</button></div>`;
+  $('#rmVid').addEventListener('click', () => { draft.video = null; $('#vidOut').innerHTML = ''; });
 }
 
 async function toggleRec() {
@@ -317,8 +332,12 @@ async function toggleRec() {
   rec.onstop = () => {
     clearInterval(recTick); recStream.getTracks().forEach(t => t.stop());
     const blob = new Blob(chunks, {type: rec.mimeType || type || 'audio/webm'});
-    if (draft) { draft.voice = blob; $('#recOut').innerHTML = `<audio controls src="${URL.createObjectURL(blob)}"></audio><div class="muted">Recorded · ${mb(blob.size)} · tap Record again to replace</div>`; }
-    $('#recBtn').textContent = 'Record'; $('#recBtn').classList.remove('on'); $('#recS').textContent = 'Saved on your phone until you tap Save';
+    if (draft) {
+      draft.voice = blob;
+      $('#recOut').innerHTML = `<audio controls src="${URL.createObjectURL(blob)}"></audio><div class="row"><span class="muted">Recorded · ${mb(blob.size)}</span><button type="button" class="link" id="rmVoice">Delete recording</button></div>`;
+      $('#rmVoice').addEventListener('click', () => { draft.voice = null; $('#recOut').innerHTML = ''; $('#recT').textContent = '0:00'; $('#recS').textContent = 'Tap to start, tap again to stop'; });
+    }
+    $('#recBtn').textContent = 'Record'; $('#recBtn').classList.remove('on'); $('#recS').textContent = 'Kept on your phone until you tap Save';
   };
   rec.start(1000);
   $('#recBtn').textContent = 'Stop'; $('#recBtn').classList.add('on'); $('#recS').textContent = 'Recording…';
@@ -328,41 +347,80 @@ async function toggleRec() {
 const toB64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(blob); });
 const extFor = t => /mp4|m4a|aac/.test(t) ? 'm4a' : /webm/.test(t) ? 'webm' : /ogg/.test(t) ? 'ogg' : 'audio';
 
+/** Makes a lighter copy of a photo (longest side 2000 px). The original on the phone is untouched. */
+async function shrinkPhoto(file) {
+  try {
+    const bmp = await createImageBitmap(file, {imageOrientation: 'from-image'});
+    const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(bmp.width * scale); cv.height = Math.round(bmp.height * scale);
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+    const out = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.85));
+    return out && out.size < file.size ? out : file;
+  } catch (e) { return file; }
+}
+
+/** Sends one file. Big ones go in 1 MB pieces that the clerk puts back together. */
+const PIECE = 1000000;
+async function sendEntry(payload, blob, onProgress) {
+  if (!blob) return api('entry', payload);
+  const b64 = await toB64(blob);
+  if (b64.length <= PIECE) return api('entry', Object.assign(payload, {data: b64}));
+  const uploadId = uid() + uid(), total = Math.ceil(b64.length / PIECE);
+  for (let i = 0; i < total; i++) {
+    await api('chunk', {uploadId, index: i, data: b64.slice(i * PIECE, (i + 1) * PIECE)});
+    onProgress(Math.round((i + 1) / total * 100));
+  }
+  return api('entry', Object.assign(payload, {uploadId, chunks: total}));
+}
+
+function explain(err) {
+  const m = String(err && err.message || err);
+  if (m === 'wrong_key') return 'The clerk didn’t accept your key.';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Couldn’t reach the clerk. Check your connection.';
+  if (/Unexpected token|JSON/i.test(m)) return 'The clerk sent back something unexpected (the file may be too big).';
+  return 'The clerk said: ' + m;
+}
+
 async function saveDraft() {
   if (busy || !draft) return;
   if (rec && rec.state === 'recording') { toast('Stop the recording first'); return; }
   const c = current, d = draft, isAnswer = d.mode === 'answer', note = d.noteDone ? '' : $('#note').value.trim();
-  const who = [...document.querySelectorAll('.chips input:checked')].map(i => i.value).join(', ');
-  const useLoc = !isAnswer && $('#useLoc').checked;
+  const who = [...document.querySelectorAll('.chips input[type=checkbox]:checked')].map(i => i.value).join(', ');
   const base = {chapterId: c.id, trip: c.name, category: c.category, who: isAnswer ? '' : who,
-    place: isAnswer ? '' : $('#place').value.trim(), lat: useLoc ? d.lat : null, lng: useLoc ? d.lng : null,
+    place: isAnswer ? '' : $('#place').value.trim(), lat: !isAnswer && d.here === 'yes' ? d.lat : null, lng: !isAnswer && d.here === 'yes' ? d.lng : null,
     question: isAnswer ? d.q[0] : ''};
-  const moment = uid(), stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const moment = d.moment || (d.moment = uid()), stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const items = [];
-  d.photos.forEach((f, i) => items.push({kind:'photo', file:f, fileName:`photo-${stamp}-${i+1}.${(f.name.split('.').pop()||'jpg')}`}));
-  if (d.voice) items.push({kind: isAnswer ? 'answer' : 'voice', file:d.voice, fileName:`voice-${stamp}.${extFor(d.voice.type)}`});
-  if (d.video) items.push({kind:'video', file:d.video, fileName:`video-${stamp}.${(d.video.name.split('.').pop()||'mp4')}`});
+  d.photos.forEach((p, i) => items.push({kind:'photo', photo:p, fileName:`photo-${stamp}-${i+1}.jpg`}));
+  if (d.voice) items.push({kind: isAnswer ? 'answer' : 'voice', blob:d.voice, fileName:`voice-${stamp}.${extFor(d.voice.type)}`});
+  if (d.video) items.push({kind:'video', blob:d.video, fileName:`video-${stamp}.${(d.video.name.split('.').pop()||'mp4')}`});
   if (!items.length && !note) {
-    if (d.noteDone) { closeComposer(); loadEntries(); return; } $('#saveS').className = 'status bad'; $('#saveS').textContent = 'Add something first.'; return; }
+    if (d.noteDone) { closeComposer(); loadEntries(); return; }
+    $('#saveS').className = 'status bad'; $('#saveS').textContent = 'Add something first.'; return; }
   if (items.length) items[0].text = note; else items.push({kind: isAnswer ? 'answer' : 'note', text: note});
   busy = true; $('#save').disabled = true; $('#cancel').disabled = true;
   try {
     for (let i = 0; i < items.length; i++) {
-      const it = items[i];
-      $('#saveS').className = 'status'; $('#saveS').textContent = `Saving ${i+1} of ${items.length}… keep this open`;
-      const payload = Object.assign({}, base, {id: `${moment}-${i+1}`, kind: it.kind, text: it.text || '', at: new Date().toISOString()});
-      if (it.file) Object.assign(payload, {fileName: it.fileName, mimeType: it.file.type || 'application/octet-stream', data: await toB64(it.file)});
-      await api('entry', payload);
+      const it = items[i], label = `Saving ${i+1} of ${items.length}`;
+      $('#saveS').className = 'status'; $('#saveS').textContent = `${label}… keep this open`;
+      const payload = Object.assign({}, base, {id: `${moment}-${(d.sent || 0) + 1}`, kind: it.kind, text: it.text || '', at: new Date().toISOString()});
+      let blob = it.blob;
+      if (it.photo) blob = await shrinkPhoto(it.photo.file);
+      if (blob) Object.assign(payload, {fileName: it.fileName, mimeType: blob.type || 'application/octet-stream'});
+      await sendEntry(payload, blob, pct => { $('#saveS').textContent = `${label} (${pct}%)… keep this open`; });
       it.done = true; if (it.text) d.noteDone = true;
+      if (it.photo) d.photos = d.photos.filter(p => p !== it.photo);
+      if (it.blob === d.voice) d.voice = null;
+      if (it.blob === d.video) d.video = null;
+      d.sent = (d.sent || 0) + 1;
     }
     busy = false; closeComposer(); toast(isAnswer ? 'Answer saved ✓' : 'Moment saved ✓'); loadEntries();
   } catch (err) {
     busy = false; $('#save').disabled = false; $('#cancel').disabled = false;
+    renderPhotos();
     const left = items.filter(it => !it.done).length;
-    d.photos = d.photos.filter((f, i) => !items.find(it => it.file === f && it.done));
-    if (items.find(it => it.file === d.voice && it.done)) d.voice = null;
-    if (items.find(it => it.file === d.video && it.done)) d.video = null;
-    $('#saveS').className = 'status bad'; $('#saveS').textContent = `${left} item${left > 1 ? 's' : ''} didn’t save. Check your connection and tap Save to try again.`;
+    $('#saveS').className = 'status bad'; $('#saveS').textContent = `${left} item${left > 1 ? 's' : ''} didn’t save. ${explain(err)} Tap Save to try again.`;
   }
 }
 
