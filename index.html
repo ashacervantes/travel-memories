@@ -274,8 +274,8 @@ function openComposer(opts) {
     <div class="status" id="saveS"></div>
     <div class="grid2" style="margin-top:12px"><button class="btn alt" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save</button></div>`;
   $('#sheet').classList.add('open');
-  $('#inPhoto').addEventListener('change', e => { [...e.target.files].forEach(f => addFile('photo', f)); e.target.value = ''; });
-  document.querySelectorAll('.inVideo').forEach(i => i.addEventListener('change', e => { if (e.target.files[0]) addFile('video', e.target.files[0]); e.target.value = ''; }));
+  $('#inPhoto').addEventListener('change', async e => { const files = [...e.target.files]; await addPhotos(files); e.target.value = ''; });
+  document.querySelectorAll('.inVideo').forEach(i => i.addEventListener('change', async e => { const f = e.target.files[0]; if (f) await addVideo(f); e.target.value = ''; }));
   document.querySelectorAll('input[name=here]').forEach(r => r.addEventListener('change', () => {
     draft.here = r.value;
     if (r.value === 'yes') getLocation(); else { draft.lat = draft.lng = null; $('#locS').textContent = 'No location from your phone. Type the place name below.'; }
@@ -308,16 +308,46 @@ function getLocation() {
 }
 
 function renderPhotos() {
+  if (!draft) return;
   $('#thPhoto').innerHTML = draft.photos.map((p, i) => `<div class="th"><img src="${p.url}" alt="Selected photo ${i+1}"><button type="button" class="x" data-x="${i}" aria-label="Remove photo ${i+1}">✕</button></div>`).join('');
   document.querySelectorAll('#thPhoto .x').forEach(b => b.addEventListener('click', () => { draft.photos.splice(+b.dataset.x, 1); renderPhotos(); }));
 }
 
-function addFile(kind, f) {
-  if (kind === 'photo') { draft.photos.push({file: f, url: URL.createObjectURL(f)}); renderPhotos(); return; }
+/** Copies a file's bytes into the app's memory right away, while the phone still allows reading it. */
+async function copyFile(f, fallbackType) {
+  const buf = await f.arrayBuffer();
+  return new Blob([buf], {type: f.type || fallbackType});
+}
+
+async function addPhotos(files) {
+  if (!files.length || !draft) return;
+  const st = $('#saveS'); st.className = 'status'; st.textContent = `Preparing ${files.length} photo${files.length > 1 ? 's' : ''}…`;
+  let failed = 0;
+  for (const f of files) {
+    try {
+      const blob = await shrinkPhoto(f);
+      if (!draft) return;
+      draft.photos.push({blob, url: URL.createObjectURL(blob)});
+      renderPhotos();
+    } catch (e) { failed++; }
+  }
+  st.className = failed ? 'status bad' : 'status';
+  st.textContent = failed ? `${failed} photo${failed > 1 ? 's' : ''} couldn’t be read from your phone. Try picking ${failed > 1 ? 'them' : 'it'} again.` : '';
+}
+
+async function addVideo(f) {
+  if (!draft) return;
   if (f.size > MAX_MB * 1048576) { $('#vidOut').innerHTML = `<div class="status bad">That video is ${mb(f.size)}. The limit is ${MAX_MB} MB, so try a shorter clip.</div>`; return; }
-  draft.video = f;
-  $('#vidOut').innerHTML = `<div class="row" style="margin-top:8px"><span class="muted">Video added · ${mb(f.size)}</span><button type="button" class="link" id="rmVid">Remove</button></div>`;
-  $('#rmVid').addEventListener('click', () => { draft.video = null; $('#vidOut').innerHTML = ''; });
+  $('#vidOut').innerHTML = `<div class="muted" style="margin-top:8px">Preparing video…</div>`;
+  try {
+    const blob = await copyFile(f, 'video/mp4');
+    if (!draft) return;
+    draft.video = blob; draft.videoExt = (f.name.split('.').pop() || 'mp4').toLowerCase();
+    $('#vidOut').innerHTML = `<div class="row" style="margin-top:8px"><span class="muted">Video added · ${mb(blob.size)}</span><button type="button" class="link" id="rmVid">Remove</button></div>`;
+    $('#rmVid').addEventListener('click', () => { draft.video = null; $('#vidOut').innerHTML = ''; });
+  } catch (e) {
+    $('#vidOut').innerHTML = `<div class="status bad">Couldn’t read that video from your phone. Try choosing it again.</div>`;
+  }
 }
 
 async function toggleRec() {
@@ -344,20 +374,34 @@ async function toggleRec() {
   recTick = setInterval(() => { const s = (Date.now() - t0) / 1000; $('#recT').textContent = `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; }, 250);
 }
 
-const toB64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(blob); });
+const toB64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(new Error('read_failed')); r.readAsDataURL(blob); });
 const extFor = t => /mp4|m4a|aac/.test(t) ? 'm4a' : /webm/.test(t) ? 'webm' : /ogg/.test(t) ? 'ogg' : 'audio';
 
-/** Makes a lighter copy of a photo (longest side 2000 px). The original on the phone is untouched. */
-async function shrinkPhoto(file) {
+/** Makes a lighter copy of a photo (longest side 2000 px). The original on the phone is untouched.
+ *  Works on Android (Chrome) and iPhone (Safari). If the photo can't be shrunk, keeps an exact copy instead. */
+async function decodeImage(file) {
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file, {imageOrientation: 'from-image'}); } catch (e) {}
+    try { return await createImageBitmap(file); } catch (e) {}
+  }
+  const url = URL.createObjectURL(file);
   try {
-    const bmp = await createImageBitmap(file, {imageOrientation: 'from-image'});
-    const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const img = new Image(); img.src = url; await img.decode();
+    return img;
+  } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+}
+async function shrinkPhoto(file) {
+  const copy = await copyFile(file, 'image/jpeg');   // read now, while allowed
+  try {
+    const pic = await decodeImage(copy);
+    const w = pic.width || pic.naturalWidth, h = pic.height || pic.naturalHeight;
+    const scale = Math.min(1, 2000 / Math.max(w, h));
     const cv = document.createElement('canvas');
-    cv.width = Math.round(bmp.width * scale); cv.height = Math.round(bmp.height * scale);
-    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+    cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+    cv.getContext('2d').drawImage(pic, 0, 0, cv.width, cv.height);
     const out = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.85));
-    return out && out.size < file.size ? out : file;
-  } catch (e) { return file; }
+    return out && out.size > 0 && out.size < copy.size ? out : copy;
+  } catch (e) { return copy; }
 }
 
 /** Sends one file. Big ones go in 1 MB pieces that the clerk puts back together. */
@@ -376,6 +420,7 @@ async function sendEntry(payload, blob, onProgress) {
 
 function explain(err) {
   const m = String(err && err.message || err);
+  if (m === 'read_failed' || /NotReadable|ProgressEvent/i.test(m)) return 'Couldn\u2019t read a file from your phone. Remove it and add it again.';
   if (m === 'wrong_key') return 'The clerk didn’t accept your key.';
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Couldn’t reach the clerk. Check your connection.';
   if (/Unexpected token|JSON/i.test(m)) return 'The clerk sent back something unexpected (the file may be too big).';
@@ -392,9 +437,9 @@ async function saveDraft() {
     question: isAnswer ? d.q[0] : ''};
   const moment = d.moment || (d.moment = uid()), stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const items = [];
-  d.photos.forEach((p, i) => items.push({kind:'photo', photo:p, fileName:`photo-${stamp}-${i+1}.jpg`}));
+  d.photos.forEach((p, i) => items.push({kind:'photo', photo:p, blob:p.blob, fileName:`photo-${stamp}-${i+1}.${/png/.test(p.blob.type) ? 'png' : 'jpg'}`}));
   if (d.voice) items.push({kind: isAnswer ? 'answer' : 'voice', blob:d.voice, fileName:`voice-${stamp}.${extFor(d.voice.type)}`});
-  if (d.video) items.push({kind:'video', blob:d.video, fileName:`video-${stamp}.${(d.video.name.split('.').pop()||'mp4')}`});
+  if (d.video) items.push({kind:'video', blob:d.video, fileName:`video-${stamp}.${d.videoExt || 'mp4'}`});
   if (!items.length && !note) {
     if (d.noteDone) { closeComposer(); loadEntries(); return; }
     $('#saveS').className = 'status bad'; $('#saveS').textContent = 'Add something first.'; return; }
@@ -405,8 +450,7 @@ async function saveDraft() {
       const it = items[i], label = `Saving ${i+1} of ${items.length}`;
       $('#saveS').className = 'status'; $('#saveS').textContent = `${label}… keep this open`;
       const payload = Object.assign({}, base, {id: `${moment}-${(d.sent || 0) + 1}`, kind: it.kind, text: it.text || '', at: new Date().toISOString()});
-      let blob = it.blob;
-      if (it.photo) blob = await shrinkPhoto(it.photo.file);
+      const blob = it.blob;
       if (blob) Object.assign(payload, {fileName: it.fileName, mimeType: blob.type || 'application/octet-stream'});
       await sendEntry(payload, blob, pct => { $('#saveS').textContent = `${label} (${pct}%)… keep this open`; });
       it.done = true; if (it.text) d.noteDone = true;
