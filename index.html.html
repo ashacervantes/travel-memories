@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12355b">
+<title>Travel Memories</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;
+--bg:light-dark(#fbfaf7,#0f1a26);--paper:light-dark(#fff,#16263a);--ink:light-dark(#14202c,#eef2f6);
+--soft:light-dark(#5b6876,#a9b6c4);--line:light-dark(#e3e0d8,#26384d);--sea:#12355b;--gold:#f2a900;
+--tint:light-dark(#fff6dc,#2a2a1c);--ok:light-dark(#1d6b45,#6fd4a0);--bad:light-dark(#a3281b,#ff8f80);--rec:#d23b2a}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:5;background:var(--sea);color:#fff;display:flex;align-items:center;gap:8px;padding:12px max(4vw,12px);min-height:60px}
+.top h1{font:400 24px/1.1 "DM Serif Display",Georgia,serif;margin:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back{background:none;border:0;color:#fff;font-size:26px;width:44px;height:44px;cursor:pointer;border-radius:10px}
+.back:focus-visible{outline:3px solid var(--gold)}
+main{max-width:680px;margin:0 auto;padding:18px max(4vw,14px) 96px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:19px}
+.muted{color:var(--soft);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 18px;border-radius:12px;border:0;background:var(--sea);color:#fff;font-weight:600;cursor:pointer;text-decoration:none;width:100%}
+.btn.alt{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.gold{background:var(--gold);color:#14202c}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,.chip:focus-within,.cat:focus-within{outline:3px solid var(--gold);outline-offset:2px}
+label.f{display:block;font-weight:600;margin:14px 0 6px}
+input[type=text],input[type=date],input[type=password],textarea{width:100%;min-height:48px;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);font-size:16px}
+textarea{min-height:96px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drop{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.drop button{min-height:76px;border-radius:14px;border:0;background:var(--sea);color:#fff;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px}
+.drop button span{font-size:24px;line-height:1}
+.chapter{display:block;width:100%;text-align:left;cursor:pointer;color:inherit}
+.chapter .cat-tag{display:inline-block;font-size:12px;font-weight:700;color:#14202c;background:var(--gold);border-radius:99px;padding:2px 10px;margin-bottom:6px}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cat{position:relative;border:2px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.cat input{position:absolute;opacity:0}
+.cat b{display:block}
+.cat:has(input:checked){border-color:var(--gold);background:var(--tint)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative;border:2px solid var(--line);border-radius:99px;padding:8px 14px;cursor:pointer;font-weight:600}
+.chip input{position:absolute;opacity:0}
+.chip:has(input:checked){border-color:var(--sea);background:var(--sea);color:#fff}
+.q{border-left:3px solid var(--gold);padding-left:12px;margin:12px 0}
+.q .es{color:var(--soft);font-style:italic}
+.q .done{color:var(--ok);font-weight:600;font-size:14px}
+.qrow{display:flex;gap:8px;margin-top:8px}
+.day h3{font:400 22px/1.2 "DM Serif Display",Georgia,serif;margin:22px 0 8px}
+.entry{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.entry .t{color:var(--soft);font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.entry .k{font-weight:600}
+.entry img{max-width:160px;border-radius:10px;display:block;margin-top:6px}
+.entry a{color:inherit}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(5,12,20,.55);display:none;align-items:flex-end;justify-content:center}
+.sheet.open{display:flex}
+.panel{background:var(--paper);width:100%;max-width:680px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px max(4vw,14px) 24px}
+.panel h2{font:400 24px/1.1 "DM Serif Display",Georgia,serif;margin:0 0 4px}
+.sec{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.sec h4{margin:0 0 8px;font-size:15px}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px}
+.rec{display:flex;align-items:center;gap:14px}
+.recbtn{width:72px;height:72px;border-radius:50%;border:0;background:var(--sea);color:#fff;font-weight:700;cursor:pointer;flex:none}
+.recbtn.on{background:var(--rec)}
+.timer{font:700 26px Figtree,sans-serif;font-variant-numeric:tabular-nums}
+audio{width:100%;margin-top:8px}
+.status{font-weight:600;min-height:1.5em;margin-top:10px}
+.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}
+.row{display:flex;align-items:center;gap:10px}
+.row input[type=checkbox]{width:22px;height:22px}
+.hide{display:none!important}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:30;display:none;max-width:90vw}
+.empty{text-align:center;color:var(--soft);padding:24px 8px}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="back hide" id="back" type="button" aria-label="Back">←</button>
+  <h1 id="title">Travel Memories</h1>
+</header>
+<main id="view"></main>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="panel" id="panel"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+const MAILBOX = 'https://script.google.com/macros/s/AKfycbz6s8u8VuiGFGQxR6SdldymjjAbM_Q3FqQQov7giOvJrMz8YU5KPYQo0m9e26ShlVr_/exec';
+const MAX_MB = 15;
+
+const CATS = {
+  trip: {label:'Trip', hint:'Vacations, getaways', qs:[
+    ['What will you remember most from this trip?','¿Qué es lo que más vas a recordar de este viaje?'],
+    ['What did you learn about the people you traveled with?','¿Qué aprendiste de quienes viajaron contigo?'],
+    ['What was hard on this trip, and how did you handle it?','¿Qué fue difícil en este viaje y cómo lo manejaste?']]},
+  holiday: {label:'Holiday & celebration', hint:'Thanksgiving, Nochebuena, birthdays', qs:[
+    ['What food, song or tradition made it feel like home?','¿Qué comida, canción o tradición hizo que se sintiera como en casa?'],
+    ['What was this holiday like when you were young?','¿Cómo era esta fecha cuando eras joven?'],
+    ['Who did you miss today?','¿A quién extrañaste hoy?']]},
+  milestone: {label:'Life milestone', hint:'Births, weddings, goodbyes', qs:[
+    ['What do you want to remember about this moment?','¿Qué quieres recordar de este momento?'],
+    ['What’s changing, for you or for the family?','¿Qué cambia, para ti o para la familia?'],
+    ['What are you feeling, the good and the hard?','¿Qué estás sintiendo, lo bueno y lo difícil?']]},
+  everyday: {label:'Everyday', hint:'Sunday lunch, a long call', qs:[
+    ['What happened that you don’t want to forget?','¿Qué pasó que no quieres olvidar?'],
+    ['Tell a story someone told today, or one it reminded you of.','Cuenta una historia que alguien contó hoy, o una que te recordó.'],
+    ['What’s been on your mind lately?','¿Qué has tenido en la mente últimamente?']]}
+};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mb = b => (b/1048576).toFixed(1) + ' MB';
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const ymd = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
+const fmtDate = s => { const d = ymd(s); return d ? d.toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}) : ''; };
+const fmtRange = c => c.end && c.end !== c.start ? `${fmtDate(c.start)} – ${fmtDate(c.end)}` : fmtDate(c.start);
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+let cfg = {};
+try { cfg = JSON.parse(localStorage.getItem('tm_cfg') || '{}'); } catch (e) {}
+const saveCfg = () => { try { localStorage.setItem('tm_cfg', JSON.stringify(cfg)); } catch (e) {} };
+
+let chapters = [], current = null, backTo = null;
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 3500); }
+function setTop(title, back) { $('#title').textContent = title; backTo = back || null; $('#back').classList.toggle('hide', !back); }
+$('#back').addEventListener('click', () => backTo && backTo());
+
+async function api(action, data) {
+  const res = await fetch(MAILBOX, {method:'POST', body: JSON.stringify(Object.assign({key: cfg.key, by: cfg.name, action}, data || {}))});
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error || 'error');
+  return out;
+}
+
+/* ---------- Setup ---------- */
+function viewSetup() {
+  setTop('Welcome');
+  const hashKey = (/[#&]k=([^&]+)/.exec(location.hash) || [])[1] || '';
+  $('#view').innerHTML = `<div class="card"><h2>Let's set you up</h2>
+    <p class="muted">You only do this once on this phone.</p>
+    <form id="setup"><label class="f" for="nm">Your name</label><input type="text" id="nm" autocomplete="given-name" required value="${esc(cfg.name||'')}">
+    <label class="f" for="ky">Private key</label><input type="password" id="ky" required value="${esc(decodeURIComponent(hashKey))}">
+    <div class="status" id="st"></div><button class="btn" type="submit">Continue</button></form></div>`;
+  $('#setup').addEventListener('submit', async e => {
+    e.preventDefault();
+    cfg.name = $('#nm').value.trim(); cfg.key = $('#ky').value.trim();
+    $('#st').className = 'status'; $('#st').textContent = 'Checking…';
+    try { await api('ping'); saveCfg(); history.replaceState(null, '', location.pathname); viewChapters(); }
+    catch (err) { $('#st').className = 'status bad'; $('#st').textContent = err.message === 'wrong_key' ? 'That key didn’t work. Check it and try again.' : 'Couldn’t reach the mailbox. Check your connection.'; }
+  });
+}
+
+/* ---------- Chapters ---------- */
+async function viewChapters() {
+  current = null;
+  setTop('Travel Memories');
+  $('#view').innerHTML = `<button class="btn gold" id="newCh" type="button">+ New chapter</button><div id="list" style="margin-top:14px"><p class="empty">Loading chapters…</p></div>`;
+  $('#newCh').addEventListener('click', viewNewChapter);
+  try {
+    chapters = (await api('listChapters')).chapters;
+    $('#list').innerHTML = chapters.length ? chapters.map((c, i) => `<button class="card chapter" data-i="${i}" type="button">
+      <span class="cat-tag">${esc((CATS[c.category]||{}).label || c.category)}</span><h2>${esc(c.name)}</h2>
+      <div class="muted">${esc(fmtRange(c))}${c.people.length ? ' · ' + esc(c.people.join(', ')) : ''}</div></button>`).join('')
+      : `<p class="empty">No chapters yet. Start one for your next trip or gathering.</p>`;
+    document.querySelectorAll('.chapter').forEach(b => b.addEventListener('click', () => viewChapter(chapters[+b.dataset.i])));
+  } catch (err) {
+    if (err.message === 'wrong_key') return viewSetup();
+    $('#list').innerHTML = `<p class="empty">Couldn’t load chapters. Check your connection and reopen the app.</p>`;
+  }
+}
+
+function viewNewChapter() {
+  setTop('New chapter', viewChapters);
+  $('#view').innerHTML = `<form class="card" id="nc">
+    <label class="f" for="cn">Name</label><input type="text" id="cn" required placeholder="Thanksgiving 2026">
+    <label class="f">Kind of chapter</label><div class="cats">${Object.entries(CATS).map(([k, c], i) =>
+      `<label class="cat"><input type="radio" name="cat" value="${k}" ${i===1?'checked':''}><b>${c.label}</b><span class="muted">${c.hint}</span></label>`).join('')}</div>
+    <div class="grid2"><div><label class="f" for="cs">Starts</label><input type="date" id="cs" required value="${today()}"></div>
+    <div><label class="f" for="ce">Ends</label><input type="date" id="ce" value="${today()}"></div></div>
+    <label class="f" for="cp">Who's there</label><input type="text" id="cp" value="${esc(cfg.name||'')}" placeholder="Asha, Mami, Papi">
+    <p class="muted">Separate names with commas.</p>
+    <div class="status" id="st"></div><button class="btn" type="submit">Create chapter</button></form>`;
+  $('#cs').addEventListener('change', () => { if ($('#ce').value < $('#cs').value) $('#ce').value = $('#cs').value; });
+  $('#nc').addEventListener('submit', async e => {
+    e.preventDefault();
+    const chapter = {id: uid(), name: $('#cn').value.trim(), category: document.querySelector('input[name=cat]:checked').value,
+      start: $('#cs').value, end: $('#ce').value || $('#cs').value,
+      people: $('#cp').value.split(',').map(s => s.trim()).filter(Boolean)};
+    $('#st').className = 'status'; $('#st').textContent = 'Creating…';
+    try { const out = await api('createChapter', {chapter}); viewChapter(out.chapter); }
+    catch (err) { $('#st').className = 'status bad'; $('#st').textContent = 'Couldn’t create it. Check your connection and try again.'; }
+  });
+}
+
+/* ---------- One chapter ---------- */
+async function viewChapter(c) {
+  current = c;
+  setTop(c.name, viewChapters);
+  const cat = CATS[c.category] || CATS.everyday;
+  $('#view').innerHTML = `<p class="muted" style="margin-top:0">${esc(cat.label)} · ${esc(fmtRange(c))}</p>
+    <div class="drop">
+      <button type="button" data-k="photo"><span>📷</span>Photo</button>
+      <button type="button" data-k="voice"><span>🎙️</span>Voice</button>
+      <button type="button" data-k="video"><span>🎥</span>Video</button>
+      <button type="button" data-k="note"><span>✏️</span>Note</button></div>
+    <div class="card" style="margin-top:14px"><h2>End-of-chapter questions</h2>
+      <p class="muted">Answer by voice or typing, whenever you're ready. One answer counts.</p>
+      ${cat.qs.map((q, i) => `<div class="q" id="q${i}"><div>${esc(q[0])}</div><div class="es">${esc(q[1])}</div>
+        <div class="done hide">Answered ✓</div><div class="qrow"><button class="btn alt" type="button" data-q="${i}">Answer</button></div></div>`).join('')}</div>
+    <div id="days"><p class="empty">Loading entries…</p></div>`;
+  document.querySelectorAll('.drop button').forEach(b => b.addEventListener('click', () => openComposer({mode:'moment', start:b.dataset.k})));
+  document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => openComposer({mode:'answer', q:cat.qs[+b.dataset.q]})));
+  loadEntries();
+}
+
+async function loadEntries() {
+  const c = current; if (!c) return;
+  try {
+    const entries = (await api('listEntries', {chapterId: c.id})).entries;
+    if (current !== c) return;
+    const cat = CATS[c.category] || CATS.everyday;
+    cat.qs.forEach((q, i) => { if (entries.some(e => e.question === q[0])) document.querySelector(`#q${i} .done`).classList.remove('hide'); });
+    if (!entries.length) { $('#days').innerHTML = `<p class="empty">Nothing yet. Tap Photo, Voice, Video or Note to add the first moment.</p>`; return; }
+    entries.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const groups = {};
+    entries.forEach(e => { const d = new Date(e.at); const k = isNaN(d) ? 'Undated' : d.toDateString(); (groups[k] = groups[k] || []).push(e); });
+    const label = {photo:'Photo', voice:'Voice note', video:'Video', note:'Note', answer:'Answer'};
+    $('#days').innerHTML = Object.entries(groups).map(([day, list]) => `<section class="day"><h3>${esc(day === 'Undated' ? day : new Date(day).toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'}))}</h3>
+      ${list.map(e => { const d = new Date(e.at); return `<div class="entry"><div class="t">${isNaN(d) ? '' : esc(d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}))}</div>
+        <div><span class="k">${esc(label[e.kind] || e.kind)}</span> <span class="muted">· ${esc(e.by)}${e.who ? ' · with ' + esc(e.who) : ''}</span>
+        ${e.question ? `<div class="muted">${esc(e.question)}</div>` : ''}
+        ${e.text ? `<div>${esc(e.text)}</div>` : ''}
+        ${e.place || e.lat ? `<div class="muted">📍 ${esc(e.place || 'Location saved')}</div>` : ''}
+        ${e.thumb ? `<img src="${e.thumb}" alt="Photo from ${esc(e.by)}">` : ''}
+        ${e.fileUrl ? `<div><a href="${esc(e.fileUrl)}" target="_blank" rel="noopener">Open in Drive</a></div>` : ''}</div></div>`; }).join('')}</section>`).join('');
+  } catch (err) {
+    $('#days').innerHTML = `<p class="empty">Couldn’t load entries right now.</p>`;
+  }
+}
+
+/* ---------- Composer (drop-in and answers) ---------- */
+let draft = null, rec = null, recStream = null, recTick = null, busy = false;
+
+function openComposer(opts) {
+  const c = current;
+  draft = {mode: opts.mode, q: opts.q, photos: [], voice: null, video: null, lat: null, lng: null};
+  const people = c.people.length ? c.people : [cfg.name];
+  const isAnswer = opts.mode === 'answer';
+  $('#panel').innerHTML = `<h2 id="sheetTitle">${isAnswer ? 'Your answer' : 'Add a moment'}</h2>
+    ${isAnswer ? `<div class="q"><div>${esc(opts.q[0])}</div><div class="es">${esc(opts.q[1])}</div></div>` : `<p class="muted">Add any mix: photos, voice, video, a note.</p>`}
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Photos</h4><label class="btn alt">Choose or take photos<input type="file" accept="image/*" multiple class="hide" id="inPhoto"></label><div class="thumbs" id="thPhoto"></div></div>
+    <div class="sec"><h4>Voice</h4><div class="rec"><button class="recbtn" id="recBtn" type="button">Record</button><div><div class="timer" id="recT">0:00</div><div class="muted" id="recS">Tap to start, tap again to stop</div></div></div><div id="recOut"></div></div>
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Video</h4><div class="grid2"><label class="btn alt">Record<input type="file" accept="video/*" capture="environment" class="hide inVideo"></label><label class="btn alt">Choose<input type="file" accept="video/*" class="hide inVideo"></label></div><div class="muted" id="vidS"></div></div>
+    <div class="sec"><h4>${isAnswer ? 'Or type it' : 'Note'}</h4><textarea id="note" placeholder="${isAnswer ? 'Type your answer…' : 'What happened? Who said what?'}"></textarea></div>
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Who was there</h4><div class="chips">${people.map(p => `<label class="chip"><input type="checkbox" value="${esc(p)}" checked>${esc(p)}</label>`).join('')}</div></div>
+    <div class="sec ${isAnswer ? 'hide' : ''}"><h4>Where</h4><div class="row"><input type="checkbox" id="useLoc" checked><label for="useLoc">Add where I am now</label></div><div class="muted" id="locS">Finding you…</div>
+      <label class="f" for="place">Place name (optional)</label><input type="text" id="place" placeholder="Tía's house, the overlook…"></div>
+    <div class="status" id="saveS"></div>
+    <div class="grid2" style="margin-top:12px"><button class="btn alt" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save</button></div>`;
+  $('#sheet').classList.add('open');
+  $('#inPhoto').addEventListener('change', e => { [...e.target.files].forEach(f => addFile('photo', f)); e.target.value = ''; });
+  document.querySelectorAll('.inVideo').forEach(i => i.addEventListener('change', e => { if (e.target.files[0]) addFile('video', e.target.files[0]); e.target.value = ''; }));
+  $('#recBtn').addEventListener('click', toggleRec);
+  $('#cancel').addEventListener('click', closeComposer);
+  $('#save').addEventListener('click', saveDraft);
+  if (!isAnswer) getLocation();
+  if (opts.start === 'photo') $('#inPhoto').click();
+  if (opts.start === 'video') document.querySelector('.inVideo').click();
+  if (opts.start === 'voice') toggleRec();
+  if (opts.start === 'note') $('#note').focus();
+}
+
+function closeComposer() {
+  if (busy) return;
+  if (rec && rec.state === 'recording') { rec.onstop = null; rec.stop(); }
+  if (recStream) recStream.getTracks().forEach(t => t.stop());
+  clearInterval(recTick); rec = null; draft = null;
+  $('#sheet').classList.remove('open');
+}
+
+function getLocation() {
+  if (!navigator.geolocation) { $('#locS').textContent = 'Location isn’t available on this browser.'; return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    if (!draft) return; draft.lat = +p.coords.latitude.toFixed(5); draft.lng = +p.coords.longitude.toFixed(5);
+    $('#locS').textContent = `📍 Location found (about ${Math.round(p.coords.accuracy)} m)`;
+  }, () => { if (draft) $('#locS').textContent = 'Couldn’t get your location. You can type a place name.'; }, {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
+}
+
+function addFile(kind, f) {
+  if (f.size > MAX_MB * 1048576) {
+    const msg = `That ${kind} is ${mb(f.size)}. The limit is ${MAX_MB} MB${kind === 'video' ? ', so try a shorter clip' : ''}.`;
+    if (kind === 'video') $('#vidS').textContent = msg; else toast(msg);
+    return;
+  }
+  if (kind === 'photo') { draft.photos.push(f); $('#thPhoto').insertAdjacentHTML('beforeend', `<img src="${URL.createObjectURL(f)}" alt="Selected photo">`); }
+  if (kind === 'video') { draft.video = f; $('#vidS').textContent = `Video added · ${mb(f.size)}`; }
+}
+
+async function toggleRec() {
+  if (rec && rec.state === 'recording') { rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { $('#recS').textContent = 'This browser can’t record audio.'; return; }
+  try { recStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch (e) { $('#recS').textContent = 'Microphone blocked. Allow it in your browser settings.'; return; }
+  const type = ['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  rec = type ? new MediaRecorder(recStream, {mimeType:type}) : new MediaRecorder(recStream);
+  const chunks = [], t0 = Date.now();
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    clearInterval(recTick); recStream.getTracks().forEach(t => t.stop());
+    const blob = new Blob(chunks, {type: rec.mimeType || type || 'audio/webm'});
+    if (draft) { draft.voice = blob; $('#recOut').innerHTML = `<audio controls src="${URL.createObjectURL(blob)}"></audio><div class="muted">Recorded · ${mb(blob.size)} · tap Record again to replace</div>`; }
+    $('#recBtn').textContent = 'Record'; $('#recBtn').classList.remove('on'); $('#recS').textContent = 'Saved on your phone until you tap Save';
+  };
+  rec.start(1000);
+  $('#recBtn').textContent = 'Stop'; $('#recBtn').classList.add('on'); $('#recS').textContent = 'Recording…';
+  recTick = setInterval(() => { const s = (Date.now() - t0) / 1000; $('#recT').textContent = `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; }, 250);
+}
+
+const toB64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(blob); });
+const extFor = t => /mp4|m4a|aac/.test(t) ? 'm4a' : /webm/.test(t) ? 'webm' : /ogg/.test(t) ? 'ogg' : 'audio';
+
+async function saveDraft() {
+  if (busy || !draft) return;
+  if (rec && rec.state === 'recording') { toast('Stop the recording first'); return; }
+  const c = current, d = draft, isAnswer = d.mode === 'answer', note = d.noteDone ? '' : $('#note').value.trim();
+  const who = [...document.querySelectorAll('.chips input:checked')].map(i => i.value).join(', ');
+  const useLoc = !isAnswer && $('#useLoc').checked;
+  const base = {chapterId: c.id, trip: c.name, category: c.category, who: isAnswer ? '' : who,
+    place: isAnswer ? '' : $('#place').value.trim(), lat: useLoc ? d.lat : null, lng: useLoc ? d.lng : null,
+    question: isAnswer ? d.q[0] : ''};
+  const moment = uid(), stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const items = [];
+  d.photos.forEach((f, i) => items.push({kind:'photo', file:f, fileName:`photo-${stamp}-${i+1}.${(f.name.split('.').pop()||'jpg')}`}));
+  if (d.voice) items.push({kind: isAnswer ? 'answer' : 'voice', file:d.voice, fileName:`voice-${stamp}.${extFor(d.voice.type)}`});
+  if (d.video) items.push({kind:'video', file:d.video, fileName:`video-${stamp}.${(d.video.name.split('.').pop()||'mp4')}`});
+  if (!items.length && !note) {
+    if (d.noteDone) { closeComposer(); loadEntries(); return; } $('#saveS').className = 'status bad'; $('#saveS').textContent = 'Add something first.'; return; }
+  if (items.length) items[0].text = note; else items.push({kind: isAnswer ? 'answer' : 'note', text: note});
+  busy = true; $('#save').disabled = true; $('#cancel').disabled = true;
+  try {
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      $('#saveS').className = 'status'; $('#saveS').textContent = `Saving ${i+1} of ${items.length}… keep this open`;
+      const payload = Object.assign({}, base, {id: `${moment}-${i+1}`, kind: it.kind, text: it.text || '', at: new Date().toISOString()});
+      if (it.file) Object.assign(payload, {fileName: it.fileName, mimeType: it.file.type || 'application/octet-stream', data: await toB64(it.file)});
+      await api('entry', payload);
+      it.done = true; if (it.text) d.noteDone = true;
+    }
+    busy = false; closeComposer(); toast(isAnswer ? 'Answer saved ✓' : 'Moment saved ✓'); loadEntries();
+  } catch (err) {
+    busy = false; $('#save').disabled = false; $('#cancel').disabled = false;
+    const left = items.filter(it => !it.done).length;
+    d.photos = d.photos.filter((f, i) => !items.find(it => it.file === f && it.done));
+    if (items.find(it => it.file === d.voice && it.done)) d.voice = null;
+    if (items.find(it => it.file === d.video && it.done)) d.video = null;
+    $('#saveS').className = 'status bad'; $('#saveS').textContent = `${left} item${left > 1 ? 's' : ''} didn’t save. Check your connection and tap Save to try again.`;
+  }
+}
+
+/* ---------- Start ---------- */
+if (cfg.key && cfg.name && !/[#&]k=/.test(location.hash)) viewChapters(); else viewSetup();
+}
+</script>
+</body>
+</html>
